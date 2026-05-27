@@ -6,7 +6,7 @@ sudo chown -R ec2-user:ec2-user $LOGS_FOLDER
 sudo chmod -R 755 $LOGS_FOLDER
 LOGS_FILE="$LOGS_FOLDER/$0.log"
 SCRIPT_DIR=$PWD
-MYSQL_HOST=mysql.vinaydevops.online
+MYSQL_HOST=mysql.daws90s.shop
 
 USERID=$(id -u)
 R="\e[31m"
@@ -29,8 +29,8 @@ VALIDATE(){
     fi
 }
 
-dnf install maven -y &>>$LOGS_FILE
-VALIDATE $? "Installing Maven"
+dnf install python3 gcc python3-devel -y &>>$LOGS_FILE
+VALIDATE $? "Installing Python"
 
 id roboshop &>>$LOGS_FILE
 if [ $? -ne 0 ]; then
@@ -43,37 +43,23 @@ fi
 rm -rf /app
 VALIDATE $? "Removing existing code"
 
-rm -rf /tmp/shipping.zip
-VALIDATE $? "Removed shipping zip"
+rm -rf /tmp/payment.zip
+VALIDATE $? "Removed payment zip"
 
 mkdir -p /app  &>>$LOGS_FILE
 VALIDATE $? "Creating app directory"
 
-curl -o /tmp/shipping.zip https://roboshop-artifacts.s3.amazonaws.com/shipping-v3.zip  &>>$LOGS_FILE
+curl -o /tmp/payment.zip https://roboshop-artifacts.s3.amazonaws.com/payment-v3.zip  &>>$LOGS_FILE
 cd /app 
-unzip /tmp/shipping.zip &>>$LOGS_FILE
-VALIDATE $? "Downloaded and extracted shipping code"
+unzip /tmp/payment.zip &>>$LOGS_FILE
+VALIDATE $? "Downloaded and extracted payment code"
 
-mvn clean package  &>>$LOGS_FILE
-mv target/shipping-1.0.jar shipping.jar 
+pip3 install -r requirements.txt  &>>$LOGS_FILE
 VALIDATE $? "Installing dependencies"
 
-cp $SCRIPT_DIR/shipping.service /etc/systemd/system/shipping.service
+cp $SCRIPT_DIR/payment.service /etc/systemd/system/payment.service
 VALIDATE $? "Created systemctl service"
 
-dnf install mysql -y &>>$LOGS_FILE
-VALIDATE $? "Installing MySQL client"
-
-mysql -h $MYSQL_HOST -u root -pRoboShop@1 -e "use cities" &>>$LOGS_FILE
-if [ $? -ne 0 ]; then
-    mysql -h $MYSQL_HOST -uroot -pRoboShop@1 < /app/db/schema.sql
-    mysql -h $MYSQL_HOST -uroot -pRoboShop@1 < /app/db/app-user.sql
-    mysql -h $MYSQL_HOST -uroot -pRoboShop@1 < /app/db/master-data.sql
-    VALIDATE $? "Data loaded"
-else
-    echo -e "Data already loaded ... $Y SKIPPING $N"
-fi
-
-systemctl enable shipping 
-systemctl restart shipping
-VALIDATE $? "Enable and restarted shipping"
+systemctl enable payment 
+systemctl restart payment
+VALIDATE $? "Enable and restarted payment"
